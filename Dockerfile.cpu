@@ -1,0 +1,10 @@
+FROM python:3.10-slim-buster
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Tokyo
+
+RUN pip install --upgrade pip
+COPY ./requirements_cpu.txt ./requirements.txt
+RUN pip install -r requirements.txt
+
+RUN apt update -y && apt install -y wget
