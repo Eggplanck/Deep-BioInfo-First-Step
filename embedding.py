@@ -153,7 +153,7 @@ def get_embedding_ESM(sequences, model_name="esm2_t33_650M_UR50S", batch_size=16
         batch_sequences = sequences[i : i + batch_size]
 
         ###
-        # Codes below are from https://github.com/facebookresearch/esm and modified.
+        # Codes below are from https://github.com/facebookresearch/esm licensed under MIT License and modified.
         seq_encoded_list = [alphabet.encode(seq_str) for seq_str in batch_sequences]
         max_len = max(len(seq_encoded) for seq_encoded in seq_encoded_list)
         tokens = torch.empty(
