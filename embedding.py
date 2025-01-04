@@ -115,43 +115,50 @@ def get_embedding_ESM(sequences, model_name="esm2_t33_650M_UR50S", batch_size=16
         model, alphabet = esm.pretrained.esm2_t6_8M_UR50D()
         embed_layer = 6
 
-    batch_size = len(sequences)
-    seq_encoded_list = [alphabet.encode(seq_str) for seq_str in sequences]
-    max_len = max(len(seq_encoded) for seq_encoded in seq_encoded_list)
-    tokens = torch.empty(
-        (
-            batch_size,
-            max_len + int(alphabet.prepend_bos) + int(alphabet.append_eos),
-        ),
-        dtype=torch.int64,
-    )
-    tokens.fill_(alphabet.padding_idx)
-    for i, seq_encoded in enumerate(seq_encoded_list):
-        if alphabet.prepend_bos:
-            tokens[i, 0] = alphabet.cls_idx
-        seq = torch.tensor(seq_encoded, dtype=torch.int64)
-        tokens[
-            i,
-            int(alphabet.prepend_bos) : len(seq_encoded) + int(alphabet.prepend_bos),
-        ] = seq
-        if alphabet.append_eos:
-            tokens[i, len(seq_encoded) + int(alphabet.prepend_bos)] = alphabet.eos_idx
-    batch_tokens = tokens
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    batch_tokens = torch.tensor(batch_tokens).to(device)
-    batch_lens = (batch_tokens != alphabet.padding_idx).sum(1)
-    with torch.no_grad():
-        results = model(batch_tokens, repr_layers=[embed_layer], return_contacts=False)
-    token_embeddings = results["representations"][embed_layer].cpu().numpy()
 
-    sequence_embeddings = []
-    for i, seq_len in enumerate(batch_lens):
-        sequence_embeddings.append(token_embeddings[i, 1 : seq_len - 1].mean(0))
+    embeddings = []
+    for i in tqdm(range(0, len(sequences), batch_size)):
+        batch_sequences = sequences[i : i + batch_size]
 
-    embeddings = np.array(sequence_embeddings)
+        seq_encoded_list = [alphabet.encode(seq_str) for seq_str in batch_sequences]
+        max_len = max(len(seq_encoded) for seq_encoded in seq_encoded_list)
+        tokens = torch.empty(
+            (
+                len(batch_sequences),
+                max_len + int(alphabet.prepend_bos) + int(alphabet.append_eos),
+            ),
+            dtype=torch.int64,
+        )
+        tokens.fill_(alphabet.padding_idx)
+        for i, seq_encoded in enumerate(seq_encoded_list):
+            if alphabet.prepend_bos:
+                tokens[i, 0] = alphabet.cls_idx
+            seq = torch.tensor(seq_encoded, dtype=torch.int64)
+            tokens[
+                i,
+                int(alphabet.prepend_bos) : len(seq_encoded)
+                + int(alphabet.prepend_bos),
+            ] = seq
+            if alphabet.append_eos:
+                tokens[i, len(seq_encoded) + int(alphabet.prepend_bos)] = (
+                    alphabet.eos_idx
+                )
+        batch_tokens = tokens.to(device)
+        batch_lens = (batch_tokens != alphabet.padding_idx).sum(1)
+        with torch.no_grad():
+            results = model(
+                batch_tokens, repr_layers=[embed_layer], return_contacts=False
+            )
+        token_embeddings = results["representations"][embed_layer].cpu().numpy()
 
+        sequence_embeddings = []
+        for i, seq_len in enumerate(batch_lens):
+            sequence_embeddings.append(token_embeddings[i, 1 : seq_len - 1].mean(0))
+
+        embeddings.append(np.stack(sequence_embeddings))
+    embeddings = np.concatenate(embeddings, axis=0)
     return embeddings
 
 
@@ -190,7 +197,7 @@ def plot_embedding(
 if __name__ == "__main__":
     import pandas as pd
 
-    df = pd.read_json("fluorescence/fluorescence_train.json", lines=False).rename(
+    df = pd.read_json("data/fluorescence/fluorescence_train.json", lines=False).rename(
         columns={"primary": "sequence"}
     )
     df["log_fluorescence"] = df["log_fluorescence"].map(lambda x: x[0])
