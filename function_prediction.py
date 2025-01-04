@@ -6,6 +6,18 @@ from sklearn.kernel_ridge import KernelRidge
 
 
 def get_predictor(train_X, train_y, val_X, val_y):
+    """
+    Train a predictor using training data and evaluate it using validation data.
+
+    Args:
+        train_X (np.ndarray): Training features with shape (n_samples, n_features).
+        train_y (np.ndarray): Training labels.
+        val_X (np.ndarray): Validation features with shape (n_samples, n_features).
+        val_y (np.ndarray): Validation labels.
+    Returns:
+        reg: Trained regressor.
+        MSE: Mean squared error on validation data.
+    """
     reg = KernelRidge(kernel="rbf", alpha=1.0).fit(train_X, train_y)
     val_pred = reg.predict(val_X)
     MSE = np.mean((val_pred - val_y) ** 2)

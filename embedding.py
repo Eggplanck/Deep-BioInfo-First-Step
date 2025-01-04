@@ -13,6 +13,16 @@ import os
 
 
 def get_embedding(model_name, sequences, batch_size=16):
+    """
+    Get embeddings of protein sequences using pretrained models.
+
+    Args:
+        model_name (str): Name of the pretrained model.
+        sequences (list of str): List of protein sequences.
+        batch_size (int): Batch size for inference.
+    Returns:
+        embeddings (np.ndarray): Array of embeddings with shape (n_sequences, n_model_dim).
+    """
     if model_name in [
         "Rostlab/protbert",
         "Rostlab/prot_t5_xl_bfd",
@@ -33,6 +43,16 @@ def get_embedding(model_name, sequences, batch_size=16):
 def get_embedding_ProtTrans(
     sequences, model_name="Rostlab/prot_t5_xl_bfd", batch_size=16
 ):
+    """
+    Get embeddings of protein sequences using ProtTrans models.
+
+    Args:
+        sequences (list of str): List of protein sequences.
+        model_name (str): Name of the pretrained model.
+        batch_size (int): Batch size for inference.
+    Returns:
+        embeddings (np.ndarray): Array of embeddings with shape (n_sequences, n_model_dim).
+    """
     if model_name in ["Rostlab/prot_t5_xl_bfd", "Rostlab/prot_t5_xl_uniref50"]:
         model = T5Model.from_pretrained(model_name)
         tokenizer = T5Tokenizer.from_pretrained(model_name)
@@ -96,6 +116,16 @@ def get_embedding_ProtTrans(
 
 
 def get_embedding_ESM(sequences, model_name="esm2_t33_650M_UR50S", batch_size=16):
+    """
+    Get embeddings of protein sequences using ESM models.
+
+    Args:
+        sequences (list of str): List of protein sequences.
+        model_name (str): Name of the pretrained model.
+        batch_size (int): Batch size for inference.
+    Returns:
+        embeddings (np.ndarray): Array of embeddings with shape (n_sequences, n_model_dim).
+    """
     if model_name == "esm2_t36_3B_UR50D":
         model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
         embed_layer = 36
@@ -122,6 +152,8 @@ def get_embedding_ESM(sequences, model_name="esm2_t33_650M_UR50S", batch_size=16
     for i in tqdm(range(0, len(sequences), batch_size)):
         batch_sequences = sequences[i : i + batch_size]
 
+        ###
+        # Codes below are from https://github.com/facebookresearch/esm and modified.
         seq_encoded_list = [alphabet.encode(seq_str) for seq_str in batch_sequences]
         max_len = max(len(seq_encoded) for seq_encoded in seq_encoded_list)
         tokens = torch.empty(
@@ -156,6 +188,7 @@ def get_embedding_ESM(sequences, model_name="esm2_t33_650M_UR50S", batch_size=16
         sequence_embeddings = []
         for i, seq_len in enumerate(batch_lens):
             sequence_embeddings.append(token_embeddings[i, 1 : seq_len - 1].mean(0))
+        ###
 
         embeddings.append(np.stack(sequence_embeddings))
     embeddings = np.concatenate(embeddings, axis=0)
@@ -165,6 +198,17 @@ def get_embedding_ESM(sequences, model_name="esm2_t33_650M_UR50S", batch_size=16
 def plot_embedding(
     embeddings, labels=None, title="", method="UMAP", show=False, save_path=None
 ):
+    """
+    Plot embeddings.
+
+    Args:
+        embeddings (np.ndarray): Array of embeddings with shape (n_sequences, n_model_dim).
+        labels (np.ndarray): Array of labels with shape (n_sequences,).
+        title (str): Title of the plot.
+        method (str): Dimensionality reduction method. "PCA", "UMAP", or "tSNE".
+        show (bool): Whether to show the plot.
+        save_path (str): Path to save the plot.
+    """
     if method == "PCA":
         pca = PCA(n_components=2)
         mapping = pca.fit_transform(embeddings)
