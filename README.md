@@ -6,7 +6,7 @@ This repository provides a first step example of bioinformatics using deep learn
 
 - Ubuntu (WSL2)
 - Docker (In WSL2)
-- NVIDIA Container Toolkit
+- NVIDIA Container Toolkit (For devices with GPU)
 
 ## Build Image
 
@@ -21,8 +21,6 @@ docker build -t deep-bioinfo-first-step-gpu . -f Dockerfile.gpu
 ```bash
 docker build -t deep-bioinfo-first-step-cpu . -f Dockerfile.cpu
 ```
-
-pip install tiktoken blobfile protobuf
 
 ## Run Image
 
